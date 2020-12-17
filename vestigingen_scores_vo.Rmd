@@ -1,0 +1,197 @@
+---
+title: "School vestigingen en scores"
+author: "Ger Inberg"
+date: "11/20/2020"
+output: 
+  html_document:
+    css: "style.css"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(dplyr)
+library(plotly)
+library(tidygeocoder)
+library(leaflet)
+library(xlsx)
+library(htmltools)
+library(RColorBrewer)
+library(shiny)
+library(DT)
+library(tidyr)
+source("common/common.R")
+source("common/vestigingen.R")
+source("vo/eindscores.R")
+source("vo/dropouts.R")
+
+SECONDARY_SCHOOL <- "vo"
+SCHOOL_TYPE      <- SECONDARY_SCHOOL
+SAMPLE_SIZE      <- 200
+PROVINCE         <- "PROVINCE"
+GEMEENTE         <- "GEMEENTE"
+MAP_LEVEL        <- GEMEENTE
+```
+
+```{r output_config, comment=NA}
+glue("School type: Voortgezet onderwijs")
+```
+
+```{r summary_data}
+title <- shiny::tags$h3("Datasets vs sample grootte")
+# get data
+vestigingen        <- get_vestigingen(SCHOOL_TYPE)
+vestigingen_loc    <- get_vestigingen_locations(SCHOOL_TYPE)
+vestigingen_sample <- get_data_sample(vestigingen_loc, size = SAMPLE_SIZE)
+achtergrond        <- get_dropout_data(SCHOOL_TYPE)
+leerlingen         <- get_aantal_leerlingen(achtergrond)
+leerlingen_sample  <- get_data_sample(leerlingen)
+eindscores         <- get_eindscore_data(SCHOOL_TYPE)
+eindscores_sample  <- get_data_sample(eindscores, size = SAMPLE_SIZE)
+scores             <- get_dropout_scores(achtergrond)
+scores_sample      <- get_data_sample(scores)
+
+table <- create_datatable(list("Vestigingen" = glue("https://duo.nl/open_onderwijsdata/images/02-alle-vestigingen-vo.csv;{nrow(vestigingen)}"),
+                                  "Leerlingen" = glue("https://duo.nl/open_onderwijsdata/images/01-leerlingen-vo-per-vestiging-naar-onderwijstype-2019.csv;{nrow(leerlingen)}"),
+                                  "Geslaagden, gezakten en cijfers" = glue("https://duo.nl/open_onderwijsdata/images/07-geslaagden-gezakten-en-cijfers-2018-2019.csv;{nrow(eindscores)}"),
+                                  "Vroegtijdige schoolverlaters" = glue("https://duo.nl/open_onderwijsdata/images/15.-vsv-per-swv-2015.csv;{nrow(scores)}")))
+
+chart <- create_map(vestigingen_sample,
+                    title = glue("{SCHOOL_TYPE} vestigingen in sample"),
+                    popup = function(i) { paste0(vestigingen_sample[i, "VESTIGINGSNAAM"])})
+ 
+tagList(title, table, tags$hr(), chart)
+```
+
+
+
+```{r vestigingen}
+title <- shiny::tags$h3("Vestigingen")
+
+# aantal vestigingen per provincie
+provincie_total  <- get_aantal_provincie(vestigingen, "totaal")
+provincie_sample <- get_aantal_provincie(vestigingen_sample, "sample")
+df_prov <- provincie_sample %>% left_join(provincie_total, by = c("PROVINCIE" = "PROVINCIE")) %>%
+    arrange(totaal)  %>%
+    mutate(PROVINCIE = factor(PROVINCIE, levels = PROVINCIE))
+
+chart1 <- create_horizontal_bar_chart(df_prov, colnames(df_prov)[1], colnames(df_prov)[2:3], 
+                                      title = glue("Aantal {SCHOOL_TYPE} scholen per provincie"), 
+                                      source_text = "DUO OnderwijsData - 3-11-2020")
+
+# top n vestigingen per gemeente/plaats
+max <- 10
+plaatsen_total  <- get_aantal_plaatsen(vestigingen, "totaal")
+plaatsen_sample <- get_aantal_plaatsen(vestigingen_sample, "sample")
+
+df_plaatsen <- plaatsen_sample %>% left_join(plaatsen_total, by = c("PLAATSNAAM" = "PLAATSNAAM")) %>%
+    arrange(totaal)  %>%
+    tail(max) %>%
+    mutate(PLAATSNAAM = factor(PLAATSNAAM, levels = PLAATSNAAM))
+
+chart2 <- create_horizontal_bar_chart(df_plaatsen, colnames(df_plaatsen)[1], colnames(df_plaatsen)[2:3], 
+                                      title = glue("Plaatsen met de meeste {SCHOOL_TYPE} scholen"), 
+                                      source_text = "DUO OnderwijsData - 3-11-2020")
+
+# vestigingsnaam -> uitsplitsen per type
+school_types_total <- get_school_types(vestigingen, "totaal", SCHOOL_TYPE)
+school_types_sample <- get_school_types(vestigingen_sample, "sample", SCHOOL_TYPE)
+df_school_types <- school_types_sample %>% left_join(school_types_total, by = c("type" = "type")) %>%
+    arrange(totaal)
+chart3 <- create_horizontal_bar_chart(df_school_types, colnames(df_school_types)[1], colnames(df_school_types)[2:3], 
+                                      title = glue("Aantal {SCHOOL_TYPE} scholen per type"), 
+                                      source_text = "DUO OnderwijsData - 3-11-2020")
+
+tagList(title, chart1, tags$hr(), chart2, tags$hr(), chart3)
+```
+```{r leerlingen}
+  # aantal leerlingen
+  title <- shiny::tags$h3("Aantal leerlingen")
+  source <- "CBS - 01-10-2015"
+
+  # Aantal leerlingen
+  chart <- area_chart(leerlingen$AantalLeerlingen, leerlingen_sample$AantalLeerlingen, title = 'Aantal Leerlingen', xaxis_title = "Aantal",  source_text = source)
+  tagList(title, chart)
+```
+
+
+```{r scores}
+  # dropout
+  title <- shiny::tags$h3("Schoolverlaters")
+  source <- "CBS - 01-10-2015"
+
+  # Score
+  chart1 <- area_chart(scores$Score, scores_sample$Score,  title = 'Aantal vroegtijdige schoolverlaters', xaxis_title = "Aantal",  source_text = source)
+  
+  # join
+  data <- vestigingen %>%  left_join(scores, by = c("VESTIGINGSNUMMER" = "VestigingsNummer"))
+
+  chart2 <- create_score_map(data, 
+                             title = glue("{toupper(SCHOOL_TYPE)} Gemiddeld aantal <br> vroegtijdige schoolverlaters"),
+                             legend_title = "Vroegtijdige schoolverlaters",
+                             map_level = PROVINCE)
+  
+  tagList(title, chart1, tags$hr(), chart2)
+```
+
+```{r map_eind_scores}
+  title <- shiny::tags$h3("Gemiddelde eindexamen scores")
+  
+  # GEMIDDELD CIJFER SCHOOLEXAMEN
+  chart1 <- create_violinplot(eindscores$GEMIDDELD.CIJFER.SCHOOLEXAMEN[complete.cases(eindscores$GEMIDDELD.CIJFER.SCHOOLEXAMEN)], 
+                           eindscores_sample$GEMIDDELD.CIJFER.SCHOOLEXAMEN[complete.cases(eindscores_sample$GEMIDDELD.CIJFER.SCHOOLEXAMEN)],
+                           title = 'Gemiddelde cijfer schoolexamen', 
+                           xaxis_title = "Score", source_text = "DUO - 01-10-2019")
+  
+  # GEMIDDELD.CIJFER.CIJFERLIJST
+  chart2 <- create_violinplot(eindscores$GEMIDDELD.CIJFER.CIJFERLIJST[complete.cases(eindscores$GEMIDDELD.CIJFER.CIJFERLIJST)], 
+                           eindscores_sample$GEMIDDELD.CIJFER.CIJFERLIJST[complete.cases(eindscores_sample$GEMIDDELD.CIJFER.CIJFERLIJST)],
+                           title = 'Gemiddeld cijfer cijferlijst', 
+                           xaxis_title = "Score", source_text = "DUO - 01-10-2019")
+  
+    # GEMIDDELD.CIJFER.CENTRAAL.EXAMEN
+  chart3 <- create_violinplot(eindscores$GEMIDDELD.CIJFER.CENTRAAL.EXAMEN[complete.cases(eindscores$GEMIDDELD.CIJFER.CENTRAAL.EXAMEN)], 
+                           eindscores_sample$GEMIDDELD.CIJFER.CENTRAAL.EXAMEN[complete.cases(eindscores_sample$GEMIDDELD.CIJFER.CENTRAAL.EXAMEN)],
+                           title = 'Gemiddelde centraal examen', 
+                           xaxis_title = "Score", source_text = "DUO - 01-10-2019")
+
+  #MAP
+  data <- vestigingen %>% 
+    left_join(eindscores %>% select(c(VESTIGINGSNUMMER, GEMIDDELD.CIJFER.SCHOOLEXAMEN)), by = c("VESTIGINGSNUMMER" = "VESTIGINGSNUMMER")) %>%
+    filter(!is.na(GEMIDDELD.CIJFER.SCHOOLEXAMEN)) %>%
+    mutate(Score = round_val(GEMIDDELD.CIJFER.SCHOOLEXAMEN))
+  
+  chart4 <- create_score_map(data, 
+                             title = glue("Gemiddeld Cijfer Schoolexamen"),
+                             legend_title = "Cijfer Schoolexamen",
+                             source_text = "DUO - 01-10-2019",
+                             map_level = PROVINCE)
+  
+  tagList(title, chart1, tags$hr(), chart2, tags$hr(), chart3, tags$hr(), chart4)
+```
+
+```{r eindscores_per_vak}
+  title <- shiny::tags$h3("Gemiddelde eindscores per vak")
+  source_text <- "DUO OnderwijsData - 3-11-2019"
+
+  # VMBO
+  df  <- get_eindscores_vakken("vmbo")
+  chart1 <- create_horizontal_bar_chart(df, colnames(df)[1], colnames(df)[2:3], 
+                                        title = glue("Gemiddelde eindcijfers VMBO"), 
+                                        xaxis_title = "Cijfer", 
+                                        source_text = source_text)
+  
+  # HAVO
+  df  <- get_eindscores_vakken("havo")
+  chart2 <- create_horizontal_bar_chart(df, colnames(df)[1], colnames(df)[2:3], 
+                                        title = glue("Gemiddelde eindcijfers Havo"), 
+                                        xaxis_title = "Cijfer", 
+                                        source_text = source_text)
+  # VWO
+  df  <- get_eindscores_vakken("vwo")  
+  chart3 <- create_horizontal_bar_chart(df, colnames(df)[1], colnames(df)[2:3], 
+                                        title = glue("Gemiddelde eindcijfers VWO"), 
+                                        xaxis_title = "Cijfer", 
+                                        source_text = source_text)
+
+  tagList(title, chart1, tags$hr(), chart2, tags$hr(), chart3)
+```

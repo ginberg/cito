@@ -1,0 +1,195 @@
+---
+title: "School vestigingen en scores"
+author: "Ger Inberg"
+date: "11/10/2020"
+output: 
+  html_document:
+    css: "style.css"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(dplyr)
+library(plotly)
+library(tidygeocoder)
+library(leaflet)
+library(xlsx)
+library(htmltools)
+library(RColorBrewer)
+library(shiny)
+library(DT)
+source("common/common.R")
+source("common/vestigingen.R")
+source("common/eindscores.R")
+source("common/achterstandsscores.R")
+source("common/afstanden.R")
+
+# School type: either "bo" or "vo"
+PRIMARY_SCHOOL   <- "bo"
+SECONDARY_SCHOOL <- "vo"
+SCHOOL_TYPE      <- PRIMARY_SCHOOL
+SAMPLE_SIZE      <- 200
+PROVINCE         <- "PROVINCE"
+GEMEENTE         <- "GEMEENTE"
+MAP_LEVEL        <- PROVINCE
+```
+
+```{r output_config, comment=NA}
+glue("School type: {ifelse(SCHOOL_TYPE == PRIMARY_SCHOOL, 'Basis onderwijs', 'Voortgezet onderwijs')}")
+```
+
+```{r summary_data}
+title <- shiny::tags$h3("Datasets vs sample grootte")
+vestigingen        <- get_vestigingen(SCHOOL_TYPE)
+vestigingen_loc    <- get_vestigingen_locations(SCHOOL_TYPE)
+vestigingen_sample <- get_data_sample(vestigingen_loc, size = SAMPLE_SIZE)
+achtergrond        <- get_achtergrond_data(SCHOOL_TYPE)
+leerlingen         <- get_aantal_leerlingen(achtergrond)
+leerlingen_sample  <- get_data_sample(leerlingen)
+scores             <- get_achtergrond_scores(achtergrond)
+scores_sample      <- get_data_sample(scores)
+afstanden          <- get_afstanden(SCHOOL_TYPE)
+afstanden_sample   <- get_data_sample(afstanden, size = SAMPLE_SIZE)
+
+table <- create_datatable(list("Vestigingen" = glue("https://duo.nl/open_onderwijsdata/images/03-alle-vestigingen-bo.csv;{nrow(vestigingen)}"),
+                               "Achterstand scores" = glue("https://www.cbs.nl/-/media/_excel/2020/06/achterstandsscores-scholen-2019.xlsx;{nrow(scores)}"),
+                               "Leerlingen" = glue("https://www.cbs.nl/-/media/_excel/2020/06/achterstandsscores-scholen-2019.xlsx;{nrow(leerlingen)}"),
+                               "Afstanden" = glue("https://duo.nl/open_onderwijsdata/images/05-gemiddelde-afstand-tussen-woonadres-leerling-en-schoolvestiging-2019-2020.csv;{nrow(afstanden)}")))
+
+chart <- create_map(vestigingen_sample,
+                    title = glue("{SCHOOL_TYPE} vestigingen in sample"),
+                    popup = function(i) { paste0(vestigingen_sample[i, "VESTIGINGSNAAM"])})
+ 
+tagList(title, table, tags$hr(), chart)
+```
+
+```{r vestigingen}
+title <- shiny::tags$h3("Vestigingen")
+
+# aantal vestigingen per provincie
+provincie_total  <- get_aantal_provincie(vestigingen, "totaal")
+provincie_sample <- get_aantal_provincie(vestigingen_sample, "sample")
+df_prov <- provincie_sample %>% left_join(provincie_total, by = c("PROVINCIE" = "PROVINCIE")) %>%
+    arrange(totaal)  %>%
+    mutate(PROVINCIE = factor(PROVINCIE, levels = PROVINCIE))
+
+chart1 <- create_horizontal_bar_chart(df_prov, colnames(df_prov)[1], colnames(df_prov)[2:3], 
+                                      title = glue("Aantal {SCHOOL_TYPE} scholen per provincie"), 
+                                      source_text = "DUO OnderwijsData - 3-11-2020")
+
+# top n vestigingen per gemeente/plaats
+max <- 10
+plaatsen_total  <- get_aantal_plaatsen(vestigingen, "totaal")
+plaatsen_sample <- get_aantal_plaatsen(vestigingen_sample, "sample")
+
+df_plaatsen <- plaatsen_sample %>% left_join(plaatsen_total, by = c("PLAATSNAAM" = "PLAATSNAAM")) %>%
+    arrange(totaal)  %>%
+    tail(max) %>%
+    mutate(PLAATSNAAM = factor(PLAATSNAAM, levels = PLAATSNAAM))
+
+chart2 <- create_horizontal_bar_chart(df_plaatsen, colnames(df_plaatsen)[1], colnames(df_plaatsen)[2:3], 
+                                      title = glue("Plaatsen met de meeste {SCHOOL_TYPE} scholen"), 
+                                      source_text = "DUO OnderwijsData - 3-11-2020")
+
+# vestigingsnaam -> uitsplitsen per type
+school_types_total <- get_school_types(vestigingen, "totaal")
+school_types_sample <- get_school_types(vestigingen_sample, "sample")
+df_school_types <- school_types_sample %>% left_join(school_types_total, by = c("type" = "type")) %>%
+    arrange(totaal)
+chart3 <- create_horizontal_bar_chart(df_school_types, colnames(df_school_types)[1], colnames(df_school_types)[2:3], 
+                                      title = glue("Aantal {SCHOOL_TYPE} scholen per type"), 
+                                      source_text = "DUO OnderwijsData - 3-11-2020")
+
+tagList(title, chart1, tags$hr(), chart2, tags$hr(), chart3)
+```
+
+```{r leerlingen}
+  # aantal leerlingen
+  title <- shiny::tags$h3("Aantal leerlingen")
+  source <- "CBS - 01-10-2019"
+  
+  # Aantal leerlingen
+  chart <- area_chart(leerlingen$AantalLeerlingen, leerlingen_sample$AantalLeerlingen, title = 'Aantal Leerlingen', xaxis_title = "Aantal",  source_text = source)
+  tagList(title, chart)
+```
+
+
+```{r scores}
+if (SCHOOL_TYPE == PRIMARY_SCHOOL) {
+  title <- shiny::tags$h3("Achterstandsscores")
+  source <- "CBS - 01-10-2019"
+  
+  # Score
+  chart1 <- area_chart(scores$Score, scores_sample$Score,  title = 'Achterstands Scores', xaxis_title = "Score",  source_text = source)
+  
+  # join
+  data <- vestigingen %>% left_join(scores, by = c("VESTIGINGSNUMMER" = "VestigingsNummer"))
+  
+  chart2 <- create_score_map(data, 
+                            title = glue("{SCHOOL_TYPE} Achterstandsscore per Provincie"),
+                            legend_title = "Achterstandsscore",
+                            map_level = PROVINCE)
+  
+  tagList(title, chart1, tags$hr(), chart2)
+}
+```
+
+
+```{r map_eind_scores}
+if (SCHOOL_TYPE == PRIMARY_SCHOOL) { 
+  title <- shiny::tags$h3("Eindscores")
+  
+  eindscores        <- get_eindscore_data(SCHOOL_TYPE)
+  eindscores_sample <- get_data_sample(eindscores, size = SAMPLE_SIZE)
+  
+  # CET
+  chart1 <- area_chart(eindscores$CET_GEM[complete.cases(eindscores$CET_GEM)], 
+                       eindscores_sample$CET_GEM[complete.cases(eindscores_sample$CET_GEM)],
+                       title = 'Gemiddelde Centrale Eindtoets Score', 
+                       xaxis_title = "Score", source_text = "DUO - 15-04-2019")
+  
+  # IEP
+  chart2 <- area_chart(eindscores$IEP_GEM[complete.cases(eindscores$IEP_GEM)], 
+                       eindscores_sample$IEP_GEM[complete.cases(eindscores_sample$IEP_GEM)],
+                       title = 'Gemiddelde Eindevaluatie Primair Onderwijs Score', 
+                       xaxis_title = "Score", source_text = "DUO - 15-04-2019")
+  
+  #MAP
+  data <- vestigingen %>% 
+    left_join(eindscores %>% select(!c(PROVINCIE, GEMEENTENAAM)), by = c("VESTIGINGSNUMMER" = "VESTIGINGSNUMMER")) %>%
+    filter(!is.na(CET_GEM)) %>%
+    mutate(Score = round_val(CET_GEM))
+  
+  chart3 <- create_score_map(data, 
+                             title = glue("Centrale Eindtoets Score"),
+                             legend_title = "Centrale Eindtoets Score",
+                             source_text = "DUO - 15-04-2019",
+                             map_level = PROVINCE)
+  
+  tagList(title, chart1, tags$hr(), chart2, tags$hr(), chart3)
+}
+```
+
+```{r afstand}
+if (SCHOOL_TYPE == PRIMARY_SCHOOL) {
+  title <- shiny::tags$h3("Gemiddelde afstand")
+  
+  # gemiddelde afstand woonadres en schoolvestiging
+  chart1 <- area_chart(afstanden$AFSTAND, afstanden_sample$AFSTAND,, title = 'Gemiddelde afstand woonadres en schoolvestiging', 
+                       xaxis_title = "Afstand (km)", source_text = "DUO - 01-10-2019")
+  
+  #MAP
+  data <- vestigingen %>% 
+    left_join(afstanden %>% select(!c(PROVINCIE, GEMEENTENAAM)), by = c("VESTIGINGSNUMMER" = "VESTIGINGSNUMMER")) %>%
+    filter(!is.na(AFSTAND)) %>%
+    mutate(Score = round_val(AFSTAND))
+  
+  chart2 <- create_score_map(data, 
+                             title = glue("Gemiddelde afstand tot school"),
+                             legend_title = "Afstand (km)",
+                             source_text = "DUO - 01-10-2019",
+                             map_level = MAP_LEVEL)
+  
+  tagList(title, chart1, tags$hr(), chart2)
+}
+```

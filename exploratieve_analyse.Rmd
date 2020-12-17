@@ -1,0 +1,202 @@
+---
+title: "Exploratieve Analyses"
+subtitle: 'Grafieken gebaseerd op gesimuleerde toetsdata'
+author: "Ger Inberg"
+date: "3-12-2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(plotly)
+library(htmltools)
+source("common/common.R")
+source("common/achterstandsscores.R")
+source("common/vestigingen.R")
+```
+
+
+```{r dataset}
+n = 5000
+
+title <- shiny::tags$h3(glue("Dataset (n={n})"))
+
+sim_Rasch = function(theta, delta) {
+  n = length(theta)
+  m = length(delta)
+  data.frame(
+    person_id = rep(paste0('p',1:n), m),
+    item_id = rep(paste0('i',1:m), each=n),
+    item_versie = rep(1:3, n*m)[1:n*m],
+    item_score = as.integer(rlogis(n*m, outer(theta, delta, "-")) > 0)
+  )
+}
+
+theta = rnorm(n)
+beta = runif(40, -1, 1)
+test_data = tibble(sim_Rasch(theta, beta))
+
+#wat persoonskenmerken toevoegen:
+geslacht = c(1, 2)
+school = c(1:50)
+leeftijd = as.integer(runif(50, 4, 13))
+
+person_properties = test_data %>%
+  distinct(person_id) %>%
+  mutate(geslacht = sample(geslacht, n, replace = T),
+         school_id = sample(school, n, replace = T),
+         leeftijd = sample(leeftijd, n, replace = T))
+
+df = test_data %>%
+  inner_join(person_properties)
+
+table <- create_DT_datatable(head(df))
+tagList(title, table, tags$hr())
+```
+
+```{r toets}
+source_text <- glue("CITO - {format(Sys.Date(), '%d-%m-%Y')}")
+chart <- df %>%
+  group_by(person_id) %>%
+  summarise(sum_score = sum(item_score), .groups = "drop") %>%
+  create_histogram(., colnames(.)[2], 
+                   name = "Total_Score",
+          		     title = glue("Toets score verdeling"),
+          		     yaxis_title = "Aantal", xaxis_title = "Total score",
+          		     source_text = source_text,
+          		     showlegend = FALSE)
+
+df_sex <- df %>%
+            group_by(person_id, geslacht) %>%
+            summarise(sum_score = sum(item_score), .groups = "drop")
+
+chart2 <- subplot(create_histogram(df_sex %>% filter(geslacht == 1), colnames(df_sex)[3],
+                         name = "Man",
+                		     title = glue("Toets score verdeling per geslacht"),
+                		     subtitle = NULL,
+                		     yaxis_title = "Aantal", xaxis_title = "Total score",
+                		     showlegend = FALSE),
+                 create_histogram(df_sex %>% filter(geslacht == 2), colnames(df_sex)[3],  
+                                  name = "Vrouw",
+                        		      title = glue("Toets score verdeling per geslacht"),
+                        		      subtitle = NULL,
+                        		      yaxis_title = "Aantal", xaxis_title = "Total score",
+                        		      source_text = source_text,
+                        		      showlegend = FALSE),
+                 margin = 0.05,
+                 shareY = TRUE, 
+                 titleX = FALSE)
+
+df_cat <- df %>%
+            group_by(person_id, item_versie) %>%
+            summarise(sum_score = sum(item_score), .groups = "drop")
+
+chart3 <- subplot(create_histogram(df_cat %>% filter(item_versie == 1), colnames(df_cat)[3],
+                         name = "Versie 1",
+                		     title = glue("Toets score verdeling per versie"),
+                		     subtitle = NULL,
+                		     yaxis_title = "Aantal", xaxis_title = "Total score",
+                		     showlegend = FALSE),
+                 create_histogram(df_cat %>% filter(item_versie == 2), colnames(df_cat)[3],
+                                  name = "Versie 2",
+                        		      title = glue("Toets score verdeling per versie"),
+                        		      subtitle = NULL,
+                        		      yaxis_title = "Aantal", xaxis_title = "Total score",
+                        		      showlegend = FALSE),
+                 create_histogram(df_cat %>% filter(item_versie == 3), colnames(df_cat)[3],
+                                  name = "Versie 3",
+                        		      title = glue("Toets score verdeling per versie"),
+                        		      subtitle = NULL,
+                        		      yaxis_title = "Aantal", xaxis_title = "Total score",
+                        		      source_text = source_text,
+                        		      showlegend = FALSE),
+                 margin = 0.05,
+                 shareY = TRUE, 
+                 titleX = FALSE)
+
+
+tagList(tags$br(), chart, tags$br(), chart2, tags$br(), chart3, tags$hr())
+```
+
+```{r leeftijd}
+chart <- df %>%
+  group_by(person_id) %>%
+  summarise(leeftijd = mean(leeftijd), .groups = "drop") %>%
+  create_histogram(., colnames(.)[2],
+                   name = "Leeftijd",
+          		     title = glue("Leeftijd verdeling"),
+          		     yaxis_title = "Aantal", xaxis_title = "Leeftijd",
+          		     source_text = source_text,
+          		     showlegend = FALSE,
+          		     bar_gap = 0.1,
+          		     nbin = 10)
+
+
+tagList(tags$br(), chart, tags$hr())
+```
+
+```{r school_score}
+df_school <- df %>%
+  group_by(person_id, school_id) %>%
+  summarise(sum_score = sum(item_score), .groups = "drop")
+school_order <- df_school %>% 
+  group_by(school_id) %>% 
+  summarise(score = median(sum_score), .groups = "drop") %>% 
+  arrange(score)
+
+chart <- df_school %>% 
+  mutate(school_id = factor(school_id, levels = school_order$school_id)) %>%
+  create_boxplot(.,
+                 "school_id", 
+                 "sum_score", 
+                 name = 'school_id;score',
+                 title = "Toets score per school", 
+                 subtitle = '',
+                 xaxis_title = "School id", 
+                 source_text = source_text)
+
+tagList(tags$br(), chart)
+```
+
+```{r link_to_real_data}
+title <- shiny::tags$h3("In combinatie met CBS data")
+
+SCHOOL_TYPE <- "bo"
+vestigingen <- get_vestigingen(SCHOOL_TYPE) %>% select(VESTIGINGSNUMMER, VESTIGINGSNAAM, PLAATSNAAM)
+achtergrond <- get_achtergrond_data(SCHOOL_TYPE)
+leerlingen  <- get_aantal_leerlingen(achtergrond) %>% 
+  select(-c(Score)) %>%
+  mutate(school_id = seq(nrow(.))) %>%
+  left_join(vestigingen, by = c("VestigingsNummer" = "VESTIGINGSNUMMER"))
+
+df_school_id <- df_school %>%
+  select(-sum_score) %>%
+  left_join(leerlingen, by = c("school_id" = "school_id"))
+
+school_order <- df_school_id %>% 
+  group_by(school_id) %>% 
+  summarise(aantal = mean(AantalLeerlingen),
+            naam = first(VESTIGINGSNAAM),
+            plaats = first(PLAATSNAAM), .groups = "drop") %>% 
+  arrange(aantal)
+
+chart <- school_order %>% 
+  mutate(school_id = factor(school_id, levels = school_order$school_id)) %>%
+  create_vertical_bar_chart(.,
+                 "school_id", 
+                 "aantal",
+                 name = 'school_id;aantal',
+                 colors = c("#1f77b4"),
+                 title = "Aantal leerlingen per school", 
+                 subtitle = '',
+                 xaxis_title = "School id",
+                 yaxis_title = "Aantal",
+                 showlegend = FALSE,
+                 source_text = source_text <- glue("CITO/CBS - {format(Sys.Date(), '%d-%m-%Y')}"),
+                 text = paste0(school_order$naam, " (", school_order$plaats, ")"),
+                 hovertemplate = paste('%{text}',
+                                       '<br>%{y}'))
+
+tagList(tags$br(), title, chart)
+```

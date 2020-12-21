@@ -18,7 +18,7 @@ get_data_sample <- function(df, size = 200) {
 }
 
 get_data_file <- function(file, type = "bo") {
-  file.path(getwd(), "../data", ifelse(endsWith(file, "rds"), "rds", type),  file)
+  file.path(getwd(), "data", ifelse(endsWith(file, "rds"), "rds", type),  file)
 }
 
 title_font <- list(

@@ -2,11 +2,13 @@
 library(dplyr)
 library(plotly)
 
-#vestigingen <- read.csv(get_data_file("alle-vestigingen-bo.csv"), sep = ";", stringsAsFactors = F)
-#sample      <- vestigingen[sample(nrow(vestigingen), 200), ]
 
-get_vestigingen <- function(type) {
-  read.csv(glue(get_data_file("alle-vestigingen-{type}.csv", type)), sep = ";", stringsAsFactors = F)
+get_vestigingen <- function(type, api = TRUE) {
+  if (type == PRIMARY_SCHOOL) {
+    get_API_data("94f22ef5-cf37-4656-b834-51523e8f3bd1")
+  } else {
+    read.csv(glue(get_data_file("alle-vestigingen-{type}.csv", type)), sep = ";", stringsAsFactors = F)
+  }
 }
 
 get_vestigingen_locations <- function(type) {

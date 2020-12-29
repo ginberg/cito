@@ -1,9 +1,13 @@
 library(glue)
+library(jsonlite)
 
 # global properties
-COLORS <- c("LIGHTBLUE", "LIGHTGRAY")
+API_BASE_URL     <- "https://onderwijsdata.duo.nl"
+COLORS           <- c("LIGHTBLUE", "LIGHTGRAY")
+DECIMALS         <- 2
+PRIMARY_SCHOOL   <- "bo"
+SECONDARY_SCHOOL <- "vo"
 
-DECIMALS <- 2
 
 get_percentage <- function(nom, denom) {
     round(100*(nom/denom), DECIMALS)
@@ -19,6 +23,17 @@ get_data_sample <- function(df, size = 200) {
 
 get_data_file <- function(file, type = "bo") {
   file.path(getwd(), "data", ifelse(endsWith(file, "rds"), "rds", type),  file)
+}
+
+get_API_data <- function(resource_id) {
+  res      <- fromJSON(glue("{API_BASE_URL}/api/3/action/datastore_search?resource_id={resource_id}&limit=100000"))
+  result   <- res$result$records
+  while (!identical(res$result$records, list())) {
+    next_url <- glue("{API_BASE_URL}{res$result$'_links'$'next'}")
+    res      <- fromJSON(next_url)
+    result   <- rbind(result, res$result$records)
+  }
+  result
 }
 
 title_font <- list(

@@ -25,8 +25,6 @@ source("common/achterstandsscores.R")
 source("common/afstanden.R")
 
 # School type: either "bo" or "vo"
-PRIMARY_SCHOOL   <- "bo"
-SECONDARY_SCHOOL <- "vo"
 SCHOOL_TYPE      <- PRIMARY_SCHOOL
 SAMPLE_SIZE      <- 200
 PROVINCE         <- "PROVINCE"

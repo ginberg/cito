@@ -2,18 +2,30 @@
 
 Deze repository bevat openbare code voor CITO op het gebied van exploratieve en representatieve analyses.
 
-### Opzetten omgeving
+### Voorbereiding
 
-De rapportages kunnen handmatig gegenereerd worden of door middel van een script.
+De rapportages kunnen in jouw eigen omgeving gedraaid worden of in een container omgeving. In het eerste geval zul je zelf de betreffende libraries moeten installeren. In het tweede geval wordt er een omgeving opgezet waar de juiste libraries worden geinstalleerd.
 
-#### Handmatig
+#### Opzetten omgeving
 
+Om de rapportages te maken, moet eerst de omegeving opgezet worden. Dit betekend dat de juiste R versie en library versies geinstalleerd moeten worden.
 
+- installeren [docker](https://docs.docker.com/get-docker/)
+- docker build -t report-maker .
+- docker run --rm -p 8787:8787 -e PASSWORD=cito -e ROOT=TRUE -v $PWD:/home/rstudio/cito report-maker
+- open browser localhost:8787
+- login rstudio/cito
+- openen cito project
+- eenmalig het script [installeren_libraries](installeren_libraries.R) uitvoeren
 
-#### Script
+#### Rapportages genereren
 
-Run het script [create_reports](create_reports.R)
+Run het script [create_reports](create_reports.R). Dit script genereert 3 html bestanden:
+* vestigingen_scores.html
+* vestigingen_scores_vo.html
+* exploratieve_analyse.html
 
+Je kunt deze bestanden openen in je webbrowser.
 
 ### Exploratieve analyses
 

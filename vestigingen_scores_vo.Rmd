@@ -29,7 +29,8 @@ SCHOOL_TYPE      <- SECONDARY_SCHOOL
 SAMPLE_SIZE      <- 200
 PROVINCE         <- "PROVINCE"
 GEMEENTE         <- "GEMEENTE"
-MAP_LEVEL        <- GEMEENTE
+MAP_LEVEL        <- PROVINCE
+USE_API          <- TRUE
 ```
 
 ```{r output_config, comment=NA}
@@ -39,13 +40,13 @@ glue("School type: Voortgezet onderwijs")
 ```{r summary_data}
 title <- shiny::tags$h3("Datasets vs sample grootte")
 # get data
-vestigingen        <- get_vestigingen(SCHOOL_TYPE)
+vestigingen        <- get_vestigingen(SCHOOL_TYPE, USE_API)
 vestigingen_loc    <- get_vestigingen_locations(SCHOOL_TYPE)
 vestigingen_sample <- get_data_sample(vestigingen_loc, size = SAMPLE_SIZE)
 achtergrond        <- get_dropout_data(SCHOOL_TYPE)
 leerlingen         <- get_aantal_leerlingen(achtergrond)
 leerlingen_sample  <- get_data_sample(leerlingen)
-eindscores         <- get_eindscore_data(SCHOOL_TYPE)
+eindscores         <- get_eindscore_data(SCHOOL_TYPE, USE_API)
 eindscores_sample  <- get_data_sample(eindscores, size = SAMPLE_SIZE)
 scores             <- get_dropout_scores(achtergrond)
 scores_sample      <- get_data_sample(scores)

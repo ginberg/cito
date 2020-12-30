@@ -3,9 +3,13 @@ library(dplyr)
 library(plotly)
 
 
-get_vestigingen <- function(type, api = TRUE) {
-  if (type == PRIMARY_SCHOOL) {
-    get_API_data("94f22ef5-cf37-4656-b834-51523e8f3bd1")
+get_vestigingen <- function(type, use_api = TRUE) {
+  if (use_api) {
+    if (type == PRIMARY_SCHOOL) {
+      get_API_data("94f22ef5-cf37-4656-b834-51523e8f3bd1")
+    } else {
+      get_API_data("70c19ca0-b24b-4596-a077-79c75caab63a")
+    }
   } else {
     read.csv(glue(get_data_file("alle-vestigingen-{type}.csv", type)), sep = ";", stringsAsFactors = F)
   }

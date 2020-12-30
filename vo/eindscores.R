@@ -12,11 +12,21 @@ clean_dataset <- function(filename) {
 }
 #clean_dataset("geslaagden-gezakten-en-cijfers-2018-2019_raw.csv")
 
-get_eindscore_data <- function(type) {
-  read.csv(get_data_file("geslaagden-gezakten-en-cijfers-2018-2019.csv", type), sep = ";", stringsAsFactors = F) %>%
-    rename(PROVINCIE = PROVINCIE.VESTIGING) %>%
-    rename(GEMEENTENAAM = GEMEENTENAAM.VESTIGING) %>%
-    mutate_at(vars(matches("GEMIDDELD.CIJFER")), funs(as.numeric(gsub(",", ".", .))))
+get_eindscore_data <- function(type, use_api = TRUE) {
+  if (use_api) {
+    get_API_data("7314e977-21f3-48bb-a9b4-91cc779f7b40") %>%
+      rename(PROVINCIE = 'PROVINCIE VESTIGING') %>%
+      rename(GEMEENTENAAM = 'GEMEENTENAAM VESTIGING') %>%
+      rename(GEMIDDELD.CIJFER.SCHOOLEXAMEN = 'GEMIDDELD CIJFER SCHOOLEXAMEN') %>%
+      rename(GEMIDDELD.CIJFER.CENTRAAL.EXAMEN = 'GEMIDDELD CIJFER CENTRAAL EXAMEN') %>%
+      rename(GEMIDDELD.CIJFER.CIJFERLIJST = 'GEMIDDELD CIJFER CIJFERLIJST') %>%
+      rename(VESTIGINGSNUMMER = BRINVESTIGINGSNUMMER)
+  } else {
+    read.csv(get_data_file("geslaagden-gezakten-en-cijfers-2018-2019.csv", type), sep = ";", stringsAsFactors = F) %>%
+      rename(PROVINCIE = PROVINCIE.VESTIGING) %>%
+      rename(GEMEENTENAAM = GEMEENTENAAM.VESTIGING) %>%
+      mutate_at(vars(matches("GEMIDDELD.CIJFER")), funs(as.numeric(gsub(",", ".", .))))
+  }
 }
 
 # per subject
@@ -56,5 +66,4 @@ get_eindscores_vakken <- function(school_type) {
   df_sample <- get_eindscores_vakken_df(get_data_sample(data), "sample")
   df <- df_sample %>% left_join(df_total, by = c("VAKNAAM" = "VAKNAAM"))
   df
-
 }

@@ -11,8 +11,11 @@ De rapportages kunnen in jouw eigen omgeving gedraaid worden of in een container
 Om de rapportages te maken, moet eerst de omegeving opgezet worden. Dit betekend dat de juiste R versie en library versies geinstalleerd moeten worden.
 
 - installeren [docker](https://docs.docker.com/get-docker/)
+- open een terminal (unix) of powershell (windows)
 - docker build -t report-maker .
-- docker run --rm -p 8787:8787 -e PASSWORD=cito -e ROOT=TRUE -v $PWD:/home/rstudio/cito report-maker
+- start de container:
+  * unix   : docker run --rm -p 8787:8787 -e PASSWORD=cito -e ROOT=TRUE -v $PWD:/home/rstudio/cito report-maker
+  * windows: docker run --rm -p 8787:8787 -e PASSWORD=cito -e ROOT=TRUE -v ${PWD}:/home/rstudio/cito report-maker
 - open browser localhost:8787
 - login rstudio/cito
 - openen cito project

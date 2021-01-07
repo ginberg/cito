@@ -51,9 +51,13 @@ eindscores_sample  <- get_data_sample(eindscores, size = SAMPLE_SIZE)
 scores             <- get_dropout_scores(achtergrond)
 scores_sample      <- get_data_sample(scores)
 
-table <- create_datatable(list("Vestigingen" = glue("https://duo.nl/open_onderwijsdata/images/02-alle-vestigingen-vo.csv;{nrow(vestigingen)}"),
+table <- create_datatable(list("Vestigingen" = ifelse(USE_API, 
+                                                      glue("{get_vestigingen_API_URL(SCHOOL_TYPE)};{nrow(vestigingen)}"),
+                                                      glue("https://duo.nl/open_onderwijsdata/images/02-alle-vestigingen-vo.csv;{nrow(vestigingen)}")),
                                   "Leerlingen" = glue("https://duo.nl/open_onderwijsdata/images/01-leerlingen-vo-per-vestiging-naar-onderwijstype-2019.csv;{nrow(leerlingen)}"),
-                                  "Geslaagden, gezakten en cijfers" = glue("https://duo.nl/open_onderwijsdata/images/07-geslaagden-gezakten-en-cijfers-2018-2019.csv;{nrow(eindscores)}"),
+                                  "Geslaagden, gezakten en cijfers" = ifelse(USE_API, 
+                                                      glue("{get_eindscore_API_URL()};{nrow(eindscores)}"),
+                                                      glue("https://duo.nl/open_onderwijsdata/images/07-geslaagden-gezakten-en-cijfers-2018-2019.csv;{nrow(eindscores)}")),
                                   "Vroegtijdige schoolverlaters" = glue("https://duo.nl/open_onderwijsdata/images/15.-vsv-per-swv-2015.csv;{nrow(scores)}")))
 
 chart <- create_map(vestigingen_sample,

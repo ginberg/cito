@@ -2,13 +2,24 @@
 library(dplyr)
 library(plotly)
 
+PRIMARY_SCHOOL_RESOURCE_ID   <- "71c229ed-7737-40d4-b610-765c2b1345c8"
+SECONDARY_SCHOOL_RESOURCE_ID <- "7672deaf-fce7-409e-9fc9-58bbddbe33c2"
+
+
+get_vestigingen_API_URL <- function(type) {
+  if (type == PRIMARY_SCHOOL) {
+      get_API_URL(PRIMARY_SCHOOL_RESOURCE_ID)
+  } else {
+      get_API_URL(SECONDARY_SCHOOL_RESOURCE_ID)
+  }
+}
 
 get_vestigingen <- function(type, use_api = TRUE) {
   if (use_api) {
     if (type == PRIMARY_SCHOOL) {
-      get_API_data("71c229ed-7737-40d4-b610-765c2b1345c8")
+      get_API_data(PRIMARY_SCHOOL_RESOURCE_ID)
     } else {
-      get_API_data("7672deaf-fce7-409e-9fc9-58bbddbe33c2")
+      get_API_data(SECONDARY_SCHOOL_RESOURCE_ID)
     }
   } else {
     read.csv(glue(get_data_file("alle-vestigingen-{type}.csv", type)), sep = ";", stringsAsFactors = F)

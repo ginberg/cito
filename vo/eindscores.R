@@ -1,6 +1,7 @@
 # Eindscores VO dataset
 library(dplyr)
 
+EINDSCORE_API_RESOURCE_ID <- "7314e977-21f3-48bb-a9b4-91cc779f7b40"
 
 # Notice: this file has some text in the wrong columns. Luckily this can be fixed quite easily with below function
 clean_dataset <- function(filename) {
@@ -14,7 +15,7 @@ clean_dataset <- function(filename) {
 
 get_eindscore_data <- function(type, use_api = TRUE) {
   if (use_api) {
-    get_API_data("7314e977-21f3-48bb-a9b4-91cc779f7b40") %>%
+    get_API_data(EINDSCORE_API_RESOURCE_ID) %>%
       rename(PROVINCIE = 'PROVINCIE VESTIGING') %>%
       rename(GEMEENTENAAM = 'GEMEENTENAAM VESTIGING') %>%
       rename(GEMIDDELD.CIJFER.SCHOOLEXAMEN = 'GEMIDDELD CIJFER SCHOOLEXAMEN') %>%
@@ -27,6 +28,10 @@ get_eindscore_data <- function(type, use_api = TRUE) {
       rename(GEMEENTENAAM = GEMEENTENAAM.VESTIGING) %>%
       mutate_at(vars(matches("GEMIDDELD.CIJFER")), funs(as.numeric(gsub(",", ".", .))))
   }
+}
+
+get_eindscore_API_URL <- function() {
+  get_API_URL(EINDSCORE_API_RESOURCE_ID)
 }
 
 # per subject

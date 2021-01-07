@@ -47,8 +47,8 @@ Onderstaand een lijst van de csv/excel bestanden (links) en de bijbehorende API 
 | File                                                                           | API URL                                                                                                     |
 | -------------------------------------------------------------------------------| ----------------------------------------------------------------------------------------------------------- |
 | achterstandsscores-scholen-2019.xlsx                                           | ?                                                                                                           |
-| alle-vestigingen-bo.csv                                                        | https://onderwijsdata.duo.nl/api/3/action/datastore_search?resource_id=94f22ef5-cf37-4656-b834-51523e8f3bd1 |
-| alle-vestigingen-vo.csv                                                        | https://onderwijsdata.duo.nl/api/3/action/datastore_search?resource_id=70c19ca0-b24b-4596-a077-79c75caab63a |
+| alle-vestigingen-bo.csv                                                        | https://onderwijsdata.duo.nl/api/3/action/datastore_search?resource_id=71c229ed-7737-40d4-b610-765c2b1345c8 |
+| alle-vestigingen-vo.csv                                                        | https://onderwijsdata.duo.nl/api/3/action/datastore_search?resource_id=7672deaf-fce7-409e-9fc9-58bbddbe33c2 |
 | gemiddelde-afstand-tussen-woonadres-leerling-en-schoolvestiging-2019-2020.csv  | ?                                                                                                           |
 | gemiddelde-eindscores-bo-sbo-2018-2019.csv                                     | https://onderwijsdata.duo.nl/api/3/action/datastore_search?resource_id=9cda6dd5-1c5a-48b3-b190-207f0008ce66 |
 | geslaagden-gezakten-en-cijfers-2018-2019.csv                                   | https://onderwijsdata.duo.nl/api/3/action/datastore_search?resource_id=7314e977-21f3-48bb-a9b4-91cc779f7b40 |

@@ -50,7 +50,9 @@ scores_sample      <- get_data_sample(scores)
 afstanden          <- get_afstanden(SCHOOL_TYPE)
 afstanden_sample   <- get_data_sample(afstanden, size = SAMPLE_SIZE)
 
-table <- create_datatable(list("Vestigingen" = glue("https://duo.nl/open_onderwijsdata/images/03-alle-vestigingen-bo.csv;{nrow(vestigingen)}"),
+table <- create_datatable(list("Vestigingen" = ifelse(USE_API, 
+                                                      glue("{get_vestigingen_API_URL(SCHOOL_TYPE)};{nrow(vestigingen)}"),
+                                                      glue("https://duo.nl/open_onderwijsdata/images/03-alle-vestigingen-bo.csv;{nrow(vestigingen)}")),
                                "Achterstand scores" = glue("https://www.cbs.nl/-/media/_excel/2020/06/achterstandsscores-scholen-2019.xlsx;{nrow(scores)}"),
                                "Leerlingen" = glue("https://www.cbs.nl/-/media/_excel/2020/06/achterstandsscores-scholen-2019.xlsx;{nrow(leerlingen)}"),
                                "Afstanden" = glue("https://duo.nl/open_onderwijsdata/images/05-gemiddelde-afstand-tussen-woonadres-leerling-en-schoolvestiging-2019-2020.csv;{nrow(afstanden)}")))

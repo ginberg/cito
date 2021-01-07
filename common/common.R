@@ -26,7 +26,7 @@ get_data_file <- function(file, type = "bo") {
 }
 
 get_API_data <- function(resource_id) {
-  res      <- fromJSON(glue("{API_BASE_URL}/api/3/action/datastore_search?resource_id={resource_id}&limit=100000"))
+  res      <- fromJSON(get_API_URL(resource_id))
   result   <- res$result$records
   while (!identical(res$result$records, list())) {
     next_url <- glue("{API_BASE_URL}{res$result$'_links'$'next'}")
@@ -34,6 +34,10 @@ get_API_data <- function(resource_id) {
     result   <- rbind(result, res$result$records)
   }
   result
+}
+
+get_API_URL <- function(resource_id) {
+  glue("{API_BASE_URL}/api/3/action/datastore_search?resource_id={resource_id}&limit=100000")
 }
 
 title_font <- list(

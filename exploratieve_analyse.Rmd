@@ -14,6 +14,7 @@ library(htmltools)
 source("common/common.R")
 source("common/achterstandsscores.R")
 source("common/vestigingen.R")
+USE_API <- TRUE
 ```
 
 
@@ -163,7 +164,7 @@ tagList(tags$br(), chart)
 title <- shiny::tags$h3("In combinatie met CBS data")
 
 SCHOOL_TYPE <- "bo"
-vestigingen <- get_vestigingen(SCHOOL_TYPE) %>% select(VESTIGINGSNUMMER, VESTIGINGSNAAM, PLAATSNAAM)
+vestigingen <- get_vestigingen(SCHOOL_TYPE, use_api = USE_API) %>% select(VESTIGINGSNUMMER, VESTIGINGSNAAM, PLAATSNAAM)
 achtergrond <- get_achtergrond_data(SCHOOL_TYPE)
 leerlingen  <- get_aantal_leerlingen(achtergrond) %>% 
   select(-c(Score)) %>%

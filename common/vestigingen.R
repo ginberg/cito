@@ -6,9 +6,9 @@ library(plotly)
 get_vestigingen <- function(type, use_api = TRUE) {
   if (use_api) {
     if (type == PRIMARY_SCHOOL) {
-      get_API_data("94f22ef5-cf37-4656-b834-51523e8f3bd1")
+      get_API_data("71c229ed-7737-40d4-b610-765c2b1345c8")
     } else {
-      get_API_data("70c19ca0-b24b-4596-a077-79c75caab63a")
+      get_API_data("7672deaf-fce7-409e-9fc9-58bbddbe33c2")
     }
   } else {
     read.csv(glue(get_data_file("alle-vestigingen-{type}.csv", type)), sep = ";", stringsAsFactors = F)
